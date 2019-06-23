@@ -210,15 +210,15 @@ namespace PhotonController
                 receivedBytes = receiver.Receive(ref ipEndPoint);
                 receivedText = ASCIIEncoding.ASCII.GetString(receivedBytes);
             }
-            if(receivedText.IndexOf("Begin file list")>=0)
+            if (receivedText.IndexOf("Begin file list") >= 0)
             {
                 int count = 0;
                 listView1.Items.Clear();
                 listView1.Columns.Clear();
-                listView1.Columns.Add("Num",28, HorizontalAlignment.Left);
-                listView1.Columns.Add("Finename",135, HorizontalAlignment.Left);
-                listView1.Columns.Add("Size",55, HorizontalAlignment.Left);
-                while (receivedText.IndexOf("End file list") <0)
+                listView1.Columns.Add("Num", 28, HorizontalAlignment.Left);
+                listView1.Columns.Add("Finename", 135, HorizontalAlignment.Left);
+                listView1.Columns.Add("Size", 55, HorizontalAlignment.Left);
+                while (receivedText.IndexOf("End file list") < 0)
                 {
                     receivedBytes = receiver.Receive(ref ipEndPoint);
                     receivedText = ASCIIEncoding.ASCII.GetString(receivedBytes);
@@ -237,13 +237,57 @@ namespace PhotonController
                 }
             }
         }
+        private float getValue(string str, string prefix, float default_val) =>
+            this.getValue(str, prefix, default_val, null);
 
+        private float getValue(string str, string prefix, float default_val, string ahead)
+        {
+            try
+            {
+                int startIndex = 0;
+                if (ahead != null)
+                {
+                    startIndex = str.IndexOf(ahead);
+                    if (startIndex != -1)
+                    {
+                        startIndex += ahead.Length;
+                    }
+                }
+                int index = str.IndexOf(prefix, startIndex);
+                if (index != -1)
+                {
+                    index += prefix.Length;
+                    int length = 0;
+                    char[] chArray = str.ToCharArray();
+                    for (int i = index; i < str.Length; i++)
+                    {
+                        char ch = chArray[i];
+                        if (((ch < '0') || (ch > '9')) && ((ch != '.') && (ch != '-')))
+                        {
+                            break;
+                        }
+                        length++;
+                    }
+                    if (length > 0)
+                    {
+                        return (float)Convert.ToDouble(str.Substring(index, length));
+                    }
+                    return default_val;
+                }
+                return default_val;
+            }
+            catch (Exception)
+            {
+                return default_val;
+            }
+        }
         private void btnUpload_Click(object sender, EventArgs e)
         {
             OpenFileDialog openFileDialog1 = new OpenFileDialog();
             openFileDialog1.Title = "Browse File to upload";
             if (openFileDialog1.ShowDialog() == DialogResult.OK)
             {
+                progressFile.Value = 0;
                 Byte[] receivedBytes;
                 gcodeCmd = "M28 " + Path.GetFileName(openFileDialog1.FileName);
                 receiver.Send(Encoding.ASCII.GetBytes(gcodeCmd), gcodeCmd.Length);
@@ -277,6 +321,13 @@ namespace PhotonController
                         receiver.Send(destinationArray, destinationArray.Length);
                         receivedBytes = receiver.Receive(ref ipEndPoint);
                         receivedText = ASCIIEncoding.ASCII.GetString(receivedBytes);
+                        if (receivedText.Contains("resend"))
+                        {
+                            long resend_index = (long)getValue(receivedText, "resend ", -1f);
+                            target_local_file_fi.Seek((long)resend_index, SeekOrigin.Begin);
+                        }
+                        progressFile.Value = (int)((100 * target_local_file_fi.Position) / target_local_file_fi.Length);
+                        Application.DoEvents();
                     }
                 }
                 try
@@ -308,6 +359,118 @@ namespace PhotonController
                 byte[] receivedBytes = receiver.Receive(ref ipEndPoint);
                 string receivedText = ASCIIEncoding.ASCII.GetString(receivedBytes);
                 updatefileList();
+            }
+        }
+
+        private void btnDownload_Click(object sender, EventArgs e)
+        {
+            if (listView1.SelectedItems.Count > 0)
+            {
+                bool isError = false;
+                SaveFileDialog saveFileDialog1 = new SaveFileDialog();
+                saveFileDialog1.Title = "Save downloaded file as . . .";
+                ListViewItem item = listView1.SelectedItems[0];
+                saveFileDialog1.FileName = item.SubItems[1].Text;
+                if (saveFileDialog1.ShowDialog() == DialogResult.OK)
+                {
+                    gcodeCmd = "M6032 '" + item.SubItems[1].Text + "'";
+                    receiver.Send(Encoding.ASCII.GetBytes(gcodeCmd), gcodeCmd.Length);
+                    byte[] receivedBytes = receiver.Receive(ref ipEndPoint);
+                    string receivedText = ASCIIEncoding.ASCII.GetString(receivedBytes);
+                    if (receivedText.Contains("ok N"))
+                        receivedBytes = receiver.Receive(ref ipEndPoint);
+                    receivedText = ASCIIEncoding.ASCII.GetString(receivedBytes);
+                    long fileLength = 0;
+                    if (receivedText.Contains("Error"))
+                    {
+                        isError = true;
+                        gcodeCmd = "M22";
+                        receiver.Send(Encoding.ASCII.GetBytes(gcodeCmd), gcodeCmd.Length);
+                        receivedBytes = receiver.Receive(ref ipEndPoint);
+                        receivedText = ASCIIEncoding.ASCII.GetString(receivedBytes);
+
+                        gcodeCmd = "M6032 '" + item.SubItems[1].Text + "'";
+                        receiver.Send(Encoding.ASCII.GetBytes(gcodeCmd), gcodeCmd.Length);
+                        receivedBytes = receiver.Receive(ref ipEndPoint);
+                        //receivedBytes = receiver.Receive(ref ipEndPoint);
+                        receivedText = ASCIIEncoding.ASCII.GetString(receivedBytes);
+                        if (receivedText.Contains("Error"))
+                            MessageBox.Show("Error occured while downloading this file");
+                        else
+                        {
+                            fileLength = (long)getValue(receivedText, "L:", -1f);
+                            if (fileLength != -1)
+                                isError = false;
+                        }
+                    }
+                    if (!isError)
+                    {
+                        fileLength = (long)getValue(receivedText, "L:", -1f);
+                        long CurrentFileLength = 0;
+                        FileStream saved_local_file_fi = new FileStream(saveFileDialog1.FileName, FileMode.Create, FileAccess.Write);
+                        gcodeCmd = "M3000";
+                        progressFile.Value = 0;
+                        while (CurrentFileLength < fileLength)
+                        {
+                            receiver.Send(Encoding.ASCII.GetBytes(gcodeCmd), gcodeCmd.Length);
+                            receivedBytes = receiver.Receive(ref ipEndPoint);
+                            uint maxValue = uint.MaxValue;
+                            if ((receivedBytes.Length >= 6) && (receivedBytes[receivedBytes.Length - 1] == 0x83))
+                            {
+                                maxValue = BitConverter.ToUInt32(receivedBytes, receivedBytes.Length - 6);
+                                if (maxValue == CurrentFileLength)
+                                {
+                                    byte num3 = 0;
+                                    for (int i = 0; i < (receivedBytes.Length - 2); i++)
+                                    {
+                                        num3 = (byte)(num3 ^ receivedBytes[i]);
+                                    }
+                                    if (num3 == receivedBytes[receivedBytes.Length - 2])
+                                    {
+
+                                        //Write this data to file
+                                        saved_local_file_fi.Write(receivedBytes, 0, receivedBytes.Length - 6);
+                                        CurrentFileLength += receivedBytes.Length - 6;
+                                        progressFile.Value = (int)((100 * CurrentFileLength) / fileLength);
+                                        Application.DoEvents();
+                                    }
+                                    else
+                                    {
+                                        gcodeCmd = "M3001 I" + CurrentFileLength;
+                                    }
+                                }
+                                else
+                                    gcodeCmd = "M3001 I" + CurrentFileLength;
+                            }
+                            else
+                            {
+                                //saved_local_file_fi.Close();
+                                gcodeCmd = "M22";
+                                receiver.Send(Encoding.ASCII.GetBytes(gcodeCmd), gcodeCmd.Length);
+                                receivedBytes = receiver.Receive(ref ipEndPoint);
+                                receivedText = ASCIIEncoding.ASCII.GetString(receivedBytes);
+                                //MessageBox.Show("Unknown error occured while downloading. Please try again");
+                                //break;
+                                gcodeCmd = "M6032 '" + item.SubItems[1].Text + "'";
+                                receiver.Send(Encoding.ASCII.GetBytes(gcodeCmd), gcodeCmd.Length);
+                                receivedBytes = receiver.Receive(ref ipEndPoint);
+                                receivedText = ASCIIEncoding.ASCII.GetString(receivedBytes);
+                                if (receivedText.Contains("ok N"))
+                                    receivedBytes = receiver.Receive(ref ipEndPoint);
+                                receivedText = ASCIIEncoding.ASCII.GetString(receivedBytes);
+                                fileLength = (long)getValue(receivedText, "L:", -1f);
+                                gcodeCmd = "M3000";
+                            }
+                        }
+
+                        saved_local_file_fi.Close();
+
+                        gcodeCmd = "M22";
+                        receiver.Send(Encoding.ASCII.GetBytes(gcodeCmd), gcodeCmd.Length);
+                        receivedBytes = receiver.Receive(ref ipEndPoint);
+                        receivedText = ASCIIEncoding.ASCII.GetString(receivedBytes);
+                    }
+                }
             }
         }
     }

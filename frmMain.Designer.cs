@@ -46,9 +46,11 @@
             this.button1 = new System.Windows.Forms.Button();
             this.btnUpload = new System.Windows.Forms.Button();
             this.groupBox3 = new System.Windows.Forms.GroupBox();
+            this.btnDelete = new System.Windows.Forms.Button();
             this.btnRefresh = new System.Windows.Forms.Button();
             this.listView1 = new System.Windows.Forms.ListView();
-            this.btnDelete = new System.Windows.Forms.Button();
+            this.btnDownload = new System.Windows.Forms.Button();
+            this.progressFile = new System.Windows.Forms.ProgressBar();
             this.groupBox1.SuspendLayout();
             this.groupBox2.SuspendLayout();
             this.groupBox3.SuspendLayout();
@@ -206,15 +208,27 @@
             // 
             // groupBox3
             // 
+            this.groupBox3.Controls.Add(this.progressFile);
+            this.groupBox3.Controls.Add(this.btnDownload);
             this.groupBox3.Controls.Add(this.btnDelete);
             this.groupBox3.Controls.Add(this.btnRefresh);
             this.groupBox3.Controls.Add(this.btnUpload);
             this.groupBox3.Location = new System.Drawing.Point(13, 246);
             this.groupBox3.Name = "groupBox3";
-            this.groupBox3.Size = new System.Drawing.Size(262, 194);
+            this.groupBox3.Size = new System.Drawing.Size(262, 217);
             this.groupBox3.TabIndex = 21;
             this.groupBox3.TabStop = false;
             this.groupBox3.Text = "Files";
+            // 
+            // btnDelete
+            // 
+            this.btnDelete.Location = new System.Drawing.Point(8, 159);
+            this.btnDelete.Name = "btnDelete";
+            this.btnDelete.Size = new System.Drawing.Size(75, 23);
+            this.btnDelete.TabIndex = 23;
+            this.btnDelete.Text = "Delete";
+            this.btnDelete.UseVisualStyleBackColor = true;
+            this.btnDelete.Click += new System.EventHandler(this.btnDelete_Click);
             // 
             // btnRefresh
             // 
@@ -236,21 +250,28 @@
             this.listView1.UseCompatibleStateImageBehavior = false;
             this.listView1.View = System.Windows.Forms.View.Details;
             // 
-            // btnDelete
+            // btnDownload
             // 
-            this.btnDelete.Location = new System.Drawing.Point(8, 159);
-            this.btnDelete.Name = "btnDelete";
-            this.btnDelete.Size = new System.Drawing.Size(75, 23);
-            this.btnDelete.TabIndex = 23;
-            this.btnDelete.Text = "Delete";
-            this.btnDelete.UseVisualStyleBackColor = true;
-            this.btnDelete.Click += new System.EventHandler(this.btnDelete_Click);
+            this.btnDownload.Location = new System.Drawing.Point(175, 188);
+            this.btnDownload.Name = "btnDownload";
+            this.btnDownload.Size = new System.Drawing.Size(75, 23);
+            this.btnDownload.TabIndex = 23;
+            this.btnDownload.Text = "Download";
+            this.btnDownload.UseVisualStyleBackColor = true;
+            this.btnDownload.Click += new System.EventHandler(this.btnDownload_Click);
+            // 
+            // progressFile
+            // 
+            this.progressFile.Location = new System.Drawing.Point(8, 188);
+            this.progressFile.Name = "progressFile";
+            this.progressFile.Size = new System.Drawing.Size(161, 23);
+            this.progressFile.TabIndex = 23;
             // 
             // frmMain
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(405, 435);
+            this.ClientSize = new System.Drawing.Size(405, 472);
             this.Controls.Add(this.listView1);
             this.Controls.Add(this.groupBox3);
             this.Controls.Add(this.button1);
@@ -288,6 +309,8 @@
         private System.Windows.Forms.Button btnRefresh;
         private System.Windows.Forms.ListView listView1;
         private System.Windows.Forms.Button btnDelete;
+        private System.Windows.Forms.ProgressBar progressFile;
+        private System.Windows.Forms.Button btnDownload;
     }
 }
 
