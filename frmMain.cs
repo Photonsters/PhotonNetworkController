@@ -473,5 +473,10 @@ namespace PhotonController
                 }
             }
         }
+
+        private void frmMain_Load(object sender, EventArgs e)
+        {
+
+        }
     }
 }
