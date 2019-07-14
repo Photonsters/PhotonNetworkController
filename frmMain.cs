@@ -20,11 +20,15 @@ namespace PhotonController
 
         IPEndPoint ipEndPoint;
         UdpClient receiver;
+        
         static readonly string[] SizeSuffixes =
                    { "bytes", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB" };
         string gcodeCmd = "";
         frmLog logForm = new frmLog();
-
+        bool ispaused = false;
+        bool isPrinting = false;
+        double progressBefore = -9999;
+        int framenumber = 0;
         public frmMain()
         {
             InitializeComponent();
@@ -111,22 +115,60 @@ namespace PhotonController
                 this.lblPercentDone.Text = text;
             }
         }
-        private void DataReceived(IAsyncResult ar)
-        {
-            UdpClient c = (UdpClient)ar.AsyncState;
-            IPEndPoint receivedIpEndPoint = new IPEndPoint(IPAddress.Any, 0);
-            Byte[] receivedBytes = c.EndReceive(ar, ref receivedIpEndPoint);
+        //private void DataReceived(IAsyncResult ar)
+        //{
+        //    UdpClient c = null;
+        //    c = (UdpClient)ar.AsyncState;
+        //    IPEndPoint receivedIpEndPoint = new IPEndPoint(IPAddress.Any, 0);
+        //    Byte[] receivedBytes = c.EndReceive(ar, ref receivedIpEndPoint);
 
-            // Convert data to ASCII and print in console
-            string receivedText = ASCIIEncoding.ASCII.GetString(receivedBytes);
+        //    // Convert data to ASCII and print in console
+        //    string receivedText = ASCIIEncoding.ASCII.GetString(receivedBytes);
 
-            SetText(logForm.txtResponse.Text + receivedText);
-            //logForm.txtResponse.SelectionStart = logForm.txtResponse.Text.Length;
+        //    //SetText(logForm.txtResponse.Text + receivedText);
+        //    //logForm.txtResponse.SelectionStart = logForm.txtResponse.Text.Length;
+        //    if (gcodeCmd == "M27")     //progress report
+        //    {
+        //        string[] lines = receivedText.Split('\n');
+        //        lines = lines.Where(x => !string.IsNullOrEmpty(x)).ToArray();
+        //        double[] progress = new double[2];
+        //        if ((lines[0].Substring(0, 5).ToUpper() != "ERROR") && (lines[0].Substring(0, 2).ToUpper() != "OK"))
+        //        {
+        //            isPrinting = true;
+        //            lines = lines[0].Split(new[] { "byte" }, StringSplitOptions.None);
+        //            lines = lines[1].Split('/');
+        //            progress[0] = double.Parse(lines[0].Trim());
+        //            progress[1] = double.Parse(lines[1].Trim());
+        //            //SetText(logForm.txtResponse.Text + progressCount.ToString()+"\r\n");
+        //            if (progress[0] > progressBefore)
+        //            {
+        //                int PrintProgress = (int)Math.Round((progress[0] * 100) / progress[1]);
+        //                SetProgress(PrintProgress);
+        //                SetLbl("Percent done : " + PrintProgress.ToString());
+        //                progressBefore = progress[0];
+        //                //SetText(logForm.txtResponse.Text + "Frame = " + framenumber.ToString() + ", ");
+        //                //framenumber++;
+        //            }
 
-            // Restart listening for udp data packages
-            c.BeginReceive(DataReceived, ar.AsyncState);
+        //            //txtResponse.SelectionStart = txtResponse.Text.Length;
+        //            //txtResponse.ScrollToCaret();
+        //            //txtResponse.Refresh();
+        //        }
+        //        else if (lines[0].Substring(0, 5).ToUpper() == "ERROR")
+        //        {
+        //            if (isPrinting)      //means it was printing and now it finsihed
+        //            {
+        //                SetProgress(100);
+        //                SetLbl("Percent done : 100");
+        //            }
+        //            isPrinting = false;
+        //        }
 
-        }
+        //    }
+        //    // Restart listening for udp data packages
+        //    c.BeginReceive(DataReceived, ar.AsyncState);
+
+        //}
 
         private void btnConnect_Click(object sender, EventArgs e)
         {
@@ -140,7 +182,10 @@ namespace PhotonController
             Byte[] receivedBytes = receiver.Receive(ref ipEndPoint);
             string receivedText = ASCIIEncoding.ASCII.GetString(receivedBytes);
             if (receivedText.IndexOf("X:0.000000") != -1)
-                lblStatus.Text = "Connected";
+            {
+                
+                lblStatus.Text = getVersion().Trim() +" connected"; 
+            }
             else
                 lblStatus.Text = "Not Connected";
             gcodeCmd = "M27";
@@ -158,8 +203,50 @@ namespace PhotonController
 
         private void pollTimer_Tick(object sender, EventArgs e)
         {
-            if (gcodeCmd == "M27" || gcodeCmd == "M114" || gcodeCmd == "M4000")
-                receiver.Send(Encoding.ASCII.GetBytes(gcodeCmd), gcodeCmd.Length);
+            ////if (gcodeCmd == "M27")
+            ////{
+            //gcodeCmd = "M27";
+            //receiver.Send(Encoding.ASCII.GetBytes(gcodeCmd), gcodeCmd.Length);
+            //Byte[] receivedBytes = receiver.Receive(ref ipEndPoint);
+            //string receivedText = ASCIIEncoding.ASCII.GetString(receivedBytes);
+            ////receiver.BeginReceive(DataReceived, receiver);
+            ////if(c!=null)
+            ////    c.BeginReceive(DataReceived, receiver);
+            //string[] lines = receivedText.Split('\n');
+            //lines = lines.Where(x => !string.IsNullOrEmpty(x)).ToArray();
+            //double[] progress = new double[2];
+            //if ((lines[0].Substring(0, 5).ToUpper() != "ERROR") && (lines[0].Substring(0, 2).ToUpper() != "OK"))
+            //{
+            //    isPrinting = true;
+            //    lines = lines[0].Split(new[] { "byte" }, StringSplitOptions.None);
+            //    lines = lines[1].Split('/');
+            //    progress[0] = double.Parse(lines[0].Trim());
+            //    progress[1] = double.Parse(lines[1].Trim());
+            //    //SetText(logForm.txtResponse.Text + progressCount.ToString()+"\r\n");
+            //    if (progress[0] > progressBefore)
+            //    {
+            //        int PrintProgress = (int)Math.Round((progress[0] * 100) / progress[1]);
+            //        SetProgress(PrintProgress);
+            //        SetLbl("Percent done : " + PrintProgress.ToString());
+            //        progressBefore = progress[0];
+            //        //SetText(logForm.txtResponse.Text + "Frame = " + framenumber.ToString() + ", ");
+            //        //framenumber++;
+            //    }
+
+            //    //txtResponse.SelectionStart = txtResponse.Text.Length;
+            //    //txtResponse.ScrollToCaret();
+            //    //txtResponse.Refresh();
+            //}
+            //else if (lines[0].Substring(0, 5).ToUpper() == "ERROR")
+            //{
+            //    if (isPrinting)      //means it was printing and now it finsihed
+            //    {
+            //        SetProgress(100);
+            //        SetLbl("Percent done : 100");
+            //    }
+            //    isPrinting = false;
+            //}
+            //}
         }
 
         private void getPrintPercent()
@@ -170,29 +257,91 @@ namespace PhotonController
 
         private void btnPause_Click(object sender, EventArgs e)
         {
-            gcodeCmd = "M25";
+            if (ispaused)
+            {
+                gcodeCmd = "M24";
+                ispaused = false;
+                isPrinting = true;
+                btnPause.Text = "Pause";
+            }
+            else
+            {
+                gcodeCmd = "M25";
+                ispaused = true;
+                isPrinting = false;
+                btnPause.Text = "Resume";
+                pollTimer.Enabled = false;
+            }
             receiver.Send(Encoding.ASCII.GetBytes(gcodeCmd), gcodeCmd.Length);
+            byte[] receivedBytes = receiver.Receive(ref ipEndPoint);
+            string receivedText = ASCIIEncoding.ASCII.GetString(receivedBytes);
             //btnPause.Enabled = false;
             //btnStart.Enabled = true;
             //btnStop.Enabled = true;
+
         }
 
         private void btnStart_Click(object sender, EventArgs e)
         {
-            gcodeCmd = "M24";
-            receiver.Send(Encoding.ASCII.GetBytes(gcodeCmd), gcodeCmd.Length);
+            //gcodeCmd = "M24";
+            //receiver.Send(Encoding.ASCII.GetBytes(gcodeCmd), gcodeCmd.Length);
             //btnPause.Enabled = true;
             //btnStart.Enabled = false;
             //btnStop.Enabled = true;
+            if (listView1.SelectedItems.Count > 0)
+            {
+                ListViewItem item = listView1.SelectedItems[0];
+                //gcodeCmd = "M6030 ':" + item.SubItems[1].Text + "'";
+                gcodeCmd = "M6030 ':" + item.SubItems[1].Text + "'";
+                receiver.Send(Encoding.ASCII.GetBytes(gcodeCmd), gcodeCmd.Length);
+                byte[] receivedBytes = receiver.Receive(ref ipEndPoint);
+                string receivedText = ASCIIEncoding.ASCII.GetString(receivedBytes);
+                ispaused = false;
+                isPrinting = true;
+                //btnPause.Enabled = true;
+                btnStart.Enabled = false;
+                //btnStop.Enabled = true;
+                gcodeCmd = "M27";
+                pollTimer.Enabled = true;
+            }
+            else
+            {
+                MessageBox.Show("Please select a file before starting print");
+            }
+            
         }
-
+        private string getVersion()
+        {
+            gcodeCmd = "M4002";
+            receiver.Send(Encoding.ASCII.GetBytes(gcodeCmd), gcodeCmd.Length);
+            Byte[] receivedBytes = receiver.Receive(ref ipEndPoint);
+            string receivedText = ASCIIEncoding.ASCII.GetString(receivedBytes);
+            return receivedText.Substring(3);
+        }
         private void btnStop_Click(object sender, EventArgs e)
         {
-            gcodeCmd = "M29";
-            receiver.Send(Encoding.ASCII.GetBytes(gcodeCmd), gcodeCmd.Length);
-            //btnPause.Enabled = false;
-            //btnStart.Enabled = true;
-            //btnStop.Enabled = false;
+            DialogResult dialogResult = MessageBox.Show("Want to stop the current print？", "Confirm", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Asterisk);
+            if (dialogResult == DialogResult.Yes)
+            {
+                gcodeCmd = "M33 I5";
+                receiver.Send(Encoding.ASCII.GetBytes(gcodeCmd), gcodeCmd.Length);
+                Byte[] receivedBytes = receiver.Receive(ref ipEndPoint);
+                string receivedText = ASCIIEncoding.ASCII.GetString(receivedBytes);
+                gcodeCmd = "M29";
+                receiver.Send(Encoding.ASCII.GetBytes(gcodeCmd), gcodeCmd.Length);
+                receivedBytes = receiver.Receive(ref ipEndPoint);
+                receivedText = ASCIIEncoding.ASCII.GetString(receivedBytes);
+                gcodeCmd = "G90, G0 Z 150 F300";
+                receiver.Send(Encoding.ASCII.GetBytes(gcodeCmd), gcodeCmd.Length);
+                receivedBytes = receiver.Receive(ref ipEndPoint);
+                receivedText = ASCIIEncoding.ASCII.GetString(receivedBytes);
+                //btnPause.Enabled = false;
+                btnStart.Enabled = true;
+                //btnStop.Enabled = false;
+                ispaused = false;
+                isPrinting = false;
+                pollTimer.Enabled = false;
+            }
         }
 
         private void button1_Click(object sender, EventArgs e)
@@ -476,7 +625,7 @@ namespace PhotonController
 
         private void frmMain_Load(object sender, EventArgs e)
         {
-
+            this.FormBorderStyle = FormBorderStyle.FixedDialog;
         }
     }
 }
