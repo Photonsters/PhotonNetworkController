@@ -2,7 +2,7 @@
 
 PNC is a open source alternative to CBD ChituHB in English. 
 
-Download the latest release [here](https://github.com/Photonsters/PhotonNetworkController/releases/tag/alpha_v0.1)
+Download the latest release [here](https://github.com/Photonsters/PhotonNetworkController/releases/latest/)
 
 ![image](https://user-images.githubusercontent.com/11083514/61731366-35fb0b80-ad73-11e9-89a5-d72ef80cd0eb.png)
 
