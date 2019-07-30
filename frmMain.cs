@@ -64,6 +64,7 @@ namespace PhotonController
 
         private void SetText(string text)
         {
+
             // InvokeRequired required compares the thread ID of the
             // calling thread to the thread ID of the creating thread.
             // If these threads are different, it returns true.
@@ -172,25 +173,60 @@ namespace PhotonController
 
         private void btnConnect_Click(object sender, EventArgs e)
         {
-            receiver = new UdpClient(receiverPort);
+            // Add Get/Set user Last/Current IP from/to memory 
+            Properties.Settings.Default.LastIP = txtIP.Text;
+            Properties.Settings.Default.Save();
+
+            // Check if there is a active connection and stop it if true and reset button and list
+            if (btnConnect.Text != "Connect")
+            {
+                receiver.Close();
+                btnConnect.Text = "Connect";
+                lblStatus.Text = "Not Connected";
+                listView1.Items.Clear();
+                listView1.Columns.Clear();
+                return;
+            }
+
+            receiver = new UdpClient(receiverPort);   
+
+            // Define a timeout so the program does not get stuck on loop if the ip does not exist
+            receiver.Client.ReceiveTimeout = 5000;
             //receiver.BeginReceive(DataReceived, receiver);
             ipEndPoint = new IPEndPoint(IPAddress.Parse(txtIP.Text), int.Parse(txtPort.Text));
             receiver.Connect(ipEndPoint);
 
-            gcodeCmd = "M114";
-            receiver.Send(Encoding.ASCII.GetBytes(gcodeCmd), gcodeCmd.Length);
-            Byte[] receivedBytes = receiver.Receive(ref ipEndPoint);
-            string receivedText = ASCIIEncoding.ASCII.GetString(receivedBytes);
-            if (receivedText.IndexOf("X:0.000000") != -1)
+            Task.Delay(5000);
+
+            Console.WriteLine(receiver.Client.Connected.ToString());
+
+            Cursor.Current = Cursors.WaitCursor;
+            lblStatus.Text = "Trying to connect...";
+
+            try
             {
-                
-                lblStatus.Text = getVersion().Trim() +" connected"; 
+                gcodeCmd = "M114";
+                receiver.Send(Encoding.ASCII.GetBytes(gcodeCmd), gcodeCmd.Length);
+                Byte[] receivedBytes = receiver.Receive(ref ipEndPoint);
+                string receivedText = ASCIIEncoding.ASCII.GetString(receivedBytes);
+
+                if (receivedText.IndexOf("X:0.000000") != -1)
+                {
+
+                    lblStatus.Text = getVersion().Trim() + " connected";
+                }
+
+                btnConnect.Text = "Disconnect";
+                gcodeCmd = "M27";
+                updatefileList();
             }
-            else
-                lblStatus.Text = "Not Connected";
-            gcodeCmd = "M27";
-            updatefileList();
-            //receiver.BeginReceive(DataReceived, receiver);
+            catch
+            {
+                lblStatus.Text = "No reply from "+txtIP.Text;
+                receiver.Close();
+
+                //receiver.BeginReceive(DataReceived, receiver);
+            }
         }
 
         public void SendGcode()
@@ -626,6 +662,8 @@ namespace PhotonController
         private void frmMain_Load(object sender, EventArgs e)
         {
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
+            txtIP.Text = Properties.Settings.Default.LastIP;
         }
+
     }
 }
