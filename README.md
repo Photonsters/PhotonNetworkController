@@ -1,4 +1,10 @@
-# Photon-Network-Controller
+
+# THIS PROJECT IS DEPRECATED 
+**NEW IMPROVED VERSION [>HERE<](https://github.com/Photonsters/Universal-Photon-Network-Controller/blob/master/README.md)**
+
+----
+
+### Photon-Network-Controller
 
 PNC is a open source alternative to CBD ChituHB in English. 
 
